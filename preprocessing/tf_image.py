@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-"""Custom image operations. Some of them extends TensorFlow image library.
+"""Custom image operations.
+Most of the following methods extend TensorFlow image library, and part of
+the code is shameless copy-paste of the former!
 """
 import tensorflow as tf
 
@@ -114,6 +116,25 @@ def _Check3DImage(image, require_static=True):
         return []
 
 
+def fix_image_flip_shape(image, result):
+    """Set the shape to 3 dimensional if we don't know anything else.
+    Args:
+      image: original image size
+      result: flipped or transformed image
+    Returns:
+      An image whose shape is at least None,None,None.
+    """
+    image_shape = image.get_shape()
+    if image_shape == tensor_shape.unknown_shape():
+        result.set_shape([None, None, None])
+    else:
+        result.set_shape(image_shape)
+    return result
+
+
+# =========================================================================== #
+# Image + BBoxes methods: cropping, resizing, flipping, ...
+# =========================================================================== #
 def bboxes_crop_or_pad(bboxes,
                        height, width,
                        offset_y, offset_x,
@@ -255,3 +276,31 @@ def resize_image(image, size,
                                        method, align_corners)
         image = tf.reshape(image, tf.stack([size[0], size[1], channels]))
         return image
+
+
+def random_flip_left_right(image, bboxes, seed=None):
+    """Random flip left-right of an image and its bounding boxes.
+    """
+    def flip_bboxes(bboxes):
+        """Flip bounding boxes coordinates.
+        """
+        bboxes = tf.stack([bboxes[:, 0], 1 - bboxes[:, 3],
+                           bboxes[:, 2], 1 - bboxes[:, 1]], axis=-1)
+        return bboxes
+
+    # Random flip. Tensorflow implementation.
+    with tf.name_scope('random_flip_left_right'):
+        image = ops.convert_to_tensor(image, name='image')
+        _Check3DImage(image, require_static=False)
+        uniform_random = random_ops.random_uniform([], 0, 1.0, seed=seed)
+        mirror_cond = math_ops.less(uniform_random, .5)
+        # Flip image.
+        result = control_flow_ops.cond(mirror_cond,
+                                       lambda: array_ops.reverse_v2(image, [1]),
+                                       lambda: image)
+        # Flip bboxes.
+        bboxes = control_flow_ops.cond(mirror_cond,
+                                       lambda: flip_bboxes(bboxes),
+                                       lambda: bboxes)
+        return fix_image_flip_shape(image, result), bboxes
+

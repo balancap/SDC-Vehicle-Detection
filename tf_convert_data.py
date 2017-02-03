@@ -27,12 +27,11 @@ python tf_convert_data.py \
 import tensorflow as tf
 
 from datasets import pascalvoc_to_tfrecords
-from datasets import kitti_to_tfrecords
 
 FLAGS = tf.app.flags.FLAGS
 
 tf.app.flags.DEFINE_string(
-    'dataset_name', 'kitti',
+    'dataset_name', 'pascalvoc',
     'The name of the dataset to convert.')
 tf.app.flags.DEFINE_string(
     'dataset_dir', None,
@@ -48,13 +47,11 @@ tf.app.flags.DEFINE_string(
 def main(_):
     if not FLAGS.dataset_dir:
         raise ValueError('You must supply the dataset directory with --dataset_dir')
-    print('\nDataset directory:', FLAGS.dataset_dir)
-    print('Output directory:', FLAGS.output_dir, '\n')
+    print('Dataset directory:', FLAGS.dataset_dir)
+    print('Output directory:', FLAGS.output_dir)
 
     if FLAGS.dataset_name == 'pascalvoc':
         pascalvoc_to_tfrecords.run(FLAGS.dataset_dir, FLAGS.output_dir, FLAGS.output_name)
-    elif FLAGS.dataset_name == 'kitti':
-        kitti_to_tfrecords.run(FLAGS.dataset_dir, FLAGS.output_dir, FLAGS.output_name)
     else:
         raise ValueError('Dataset [%s] was not recognized.' % FLAGS.dataset_name)
 
