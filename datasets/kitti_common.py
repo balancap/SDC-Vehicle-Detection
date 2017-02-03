@@ -17,14 +17,15 @@ import tensorflow as tf
 
 KITTI_LABELS = {
     'none': (0, 'Background'),
-    'DontCare': (1, 'DontCare'),
-    'Car': (2, 'Vehicle'),
-    'Van': (3, 'Vehicle'),
-    'Truck': (4, 'Vehicle'),
-    'Pedestrian': (5, 'Person'),
-    'Person_sitting': (6, 'Person'),
-    'Cyclist': (7, 'Vehicle'),
-    'Tram': (8, 'Vehicle'),
-    'Misc': (9, 'Misc'),
+    'Car': (1, 'Vehicle'),
+    'Van': (2, 'Vehicle'),
+    'Truck': (3, 'Vehicle'),
+    'Pedestrian': (4, 'Person'),
+    'Person_sitting': (5, 'Person'),
+    'Cyclist': (6, 'Vehicle'),
+    'Tram': (7, 'Vehicle'),
+    'Misc': (8, 'Misc'),
+    'DontCare': (9, 'DontCare'),
 }
+NUM_CLASSES = 9
 
