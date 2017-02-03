@@ -48,8 +48,8 @@ tf.app.flags.DEFINE_string(
 def main(_):
     if not FLAGS.dataset_dir:
         raise ValueError('You must supply the dataset directory with --dataset_dir')
-    print('Dataset directory:', FLAGS.dataset_dir)
-    print('Output directory:', FLAGS.output_dir)
+    print('\nDataset directory:', FLAGS.dataset_dir)
+    print('Output directory:', FLAGS.output_dir, '\n')
 
     if FLAGS.dataset_name == 'pascalvoc':
         pascalvoc_to_tfrecords.run(FLAGS.dataset_dir, FLAGS.output_dir, FLAGS.output_name)

@@ -150,6 +150,10 @@ def _convert_to_example(image_data, shape, labels, labels_text,
     bboxes = list(map(list, zip(*bboxes)))
     dimensions = list(map(list, zip(*dimensions)))
     locations = list(map(list, zip(*locations)))
+    # Iterators.
+    it_bboxes = iter(bboxes)
+    it_dims = iter(dimensions)
+    its_locs = iter(locations)
 
     image_format = b'PNG'
     example = tf.train.Example(features=tf.train.Features(feature={
@@ -164,16 +168,16 @@ def _convert_to_example(image_data, shape, labels, labels_text,
             'object/truncated': float_feature(truncated),
             'object/occluded': int64_feature(occluded),
             'object/alpha': float_feature(alpha),
-            'object/bbox/xmin': float_feature(bboxes[0]),
-            'object/bbox/ymin': float_feature(bboxes[1]),
-            'object/bbox/xmax': float_feature(bboxes[2]),
-            'object/bbox/ymax': float_feature(bboxes[3]),
-            'object/dimensions/height': float_feature(dimensions[0]),
-            'object/dimensions/width': float_feature(dimensions[1]),
-            'object/dimensions/length': float_feature(dimensions[2]),
-            'object/location/x': float_feature(locations[0]),
-            'object/location/y': float_feature(locations[1]),
-            'object/location/z': float_feature(locations[2]),
+            'object/bbox/xmin': float_feature(next(it_bboxes, [])),
+            'object/bbox/ymin': float_feature(next(it_bboxes, [])),
+            'object/bbox/xmax': float_feature(next(it_bboxes, [])),
+            'object/bbox/ymax': float_feature(next(it_bboxes, [])),
+            'object/dimensions/height': float_feature(next(it_dims, [])),
+            'object/dimensions/width': float_feature(next(it_dims, [])),
+            'object/dimensions/length': float_feature(next(it_dims, [])),
+            'object/location/x': float_feature(next(its_locs, [])),
+            'object/location/y': float_feature(next(its_locs, [])),
+            'object/location/z': float_feature(next(its_locs, [])),
             'object/rotation_y': float_feature(rotation_y),
             }))
     return example
@@ -227,11 +231,10 @@ def run(dataset_dir, output_dir, name='kitti_train', shuffling=False):
         # Process dataset files.
         with tf.python_io.TFRecordWriter(tf_filename) as tfrecord_writer:
             for i, filename in enumerate(filenames):
-                sys.stdout.write('\r>> Converting image %d/%d' % (i + 1, len(filenames)))
+                sys.stdout.write('\r>> Converting image %d/%d' % (i+1, len(filenames)))
                 sys.stdout.flush()
 
                 name = filename[:-4]
                 _add_to_tfrecord(dataset_dir, name, tfrecord_writer,
                                  lambda x: _png_image_shape(x, sess, decoded_png, inputs))
-
         print('\nFinished converting the KITTI dataset!')
