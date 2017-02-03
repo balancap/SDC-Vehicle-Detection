@@ -19,7 +19,7 @@ import os
 import tensorflow as tf
 
 from datasets import dataset_utils
-from datasets.kitti_common import KITTI_LABELS, NUM_CLASSES
+from datasets.kitti_common import KITTI_LABELS, NUM_CLASSES, KITTI_DONTCARE
 
 slim = tf.contrib.slim
 

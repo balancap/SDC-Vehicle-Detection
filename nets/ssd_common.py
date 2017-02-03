@@ -261,6 +261,21 @@ def tf_bboxes_filter(labels, bboxes, margins=[0., 0., 0., 0.],
         return labels, bboxes
 
 
+def tf_bboxes_filter_labels(out_label, labels, bboxes,
+                            scope='bboxes_filter_labels'):
+    """Filter out a label from a collection. Typically used to get
+    of DontCare elements.
+
+    Return:
+      labels, bboxes: Filtered elements.
+    """
+    with tf.name_scope(scope):
+        mask = tf.equal(labels, out_label)
+        # Boolean masking...
+        labels = tf.boolean_mask(labels, mask)
+        bboxes = tf.boolean_mask(bboxes, mask)
+        return labels, bboxes
+
 # =========================================================================== #
 # Numpy implementations of SSD boxes functions.
 # =========================================================================== #

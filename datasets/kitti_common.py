@@ -27,5 +27,6 @@ KITTI_LABELS = {
     'Misc': (8, 'Misc'),
     'DontCare': (9, 'DontCare'),
 }
+KITTI_DONTCARE = 9
 NUM_CLASSES = 9
 
