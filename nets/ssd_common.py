@@ -270,11 +270,13 @@ def tf_bboxes_filter_labels(out_label, labels, bboxes,
       labels, bboxes: Filtered elements.
     """
     with tf.name_scope(scope):
-        mask = tf.equal(labels, out_label)
+        mask = tf.not_equal(labels, out_label)
+        tf.log
         # Boolean masking...
         labels = tf.boolean_mask(labels, mask)
         bboxes = tf.boolean_mask(bboxes, mask)
         return labels, bboxes
+
 
 # =========================================================================== #
 # Numpy implementations of SSD boxes functions.

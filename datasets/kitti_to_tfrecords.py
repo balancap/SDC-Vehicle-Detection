@@ -109,10 +109,10 @@ def _process_image(directory, name, f_png_image_shape,
                 occluded.append(int(data[2]))
                 alpha.append(float(data[3]))
                 # bbox.
-                bboxes.append((float(data[4]),
-                               float(data[5]),
-                               float(data[6]),
-                               float(data[7])
+                bboxes.append((float(data[4]) / shape[1],
+                               float(data[5]) / shape[0],
+                               float(data[6]) / shape[1],
+                               float(data[7]) / shape[0]
                                ))
                 # 3D dimensions.
                 dimensions.append((float(data[8]),

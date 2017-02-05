@@ -90,7 +90,7 @@ def get_split(split_name, dataset_dir, file_pattern=None, reader=None):
         'image': slim.tfexample_decoder.Image('image/encoded', 'image/format'),
         'shape': slim.tfexample_decoder.Tensor('image/shape'),
         'object/bbox': slim.tfexample_decoder.BoundingBox(
-                ['xmin', 'ymin', 'xmax', 'ymax'], 'object/bbox/'),
+                ['ymin', 'xmin', 'ymax', 'xmax'], 'object/bbox/'),
         'object/label': slim.tfexample_decoder.Tensor('object/label'),
     }
     decoder = slim.tfexample_decoder.TFExampleDecoder(
@@ -108,6 +108,6 @@ def get_split(split_name, dataset_dir, file_pattern=None, reader=None):
             reader=reader,
             decoder=decoder,
             num_samples=SPLITS_TO_SIZES[split_name],
-            ITEMS_TO_DESCRIPTIONS=ITEMS_TO_DESCRIPTIONS,
-            NUM_CLASSES=NUM_CLASSES,
+            items_to_descriptions=ITEMS_TO_DESCRIPTIONS,
+            num_classes=NUM_CLASSES,
             labels_to_names=labels_to_names)

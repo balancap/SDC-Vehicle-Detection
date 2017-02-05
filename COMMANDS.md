@@ -21,24 +21,27 @@ python caffe_to_tensorflow.py \
 # =========================================================================== #
 # VGG-based SSD network
 # =========================================================================== #
-DATASET_DIR=/media/paul/DataExt4/PascalVOC/dataset
-TRAIN_DIR=./logs/ssd_300_vgg
+DATASET_DIR=/media/paul/DataExt4/KITTI/dataset
+TRAIN_DIR=./logs/ssd_300_kitti
 CHECKPOINT_PATH=/media/paul/DataExt4/PascalVOC/training/ckpts/SSD_300x300_ft/ssd_300_vgg.ckpt
 CHECKPOINT_PATH=./checkpoints/ssd_300_vgg.ckpt
 python train_ssd_network.py \
     --train_dir=${TRAIN_DIR} \
     --dataset_dir=${DATASET_DIR} \
-    --dataset_name=pascalvoc_2007 \
+    --checkpoint_path=${CHECKPOINT_PATH} \
+    --checkpoint_exclude_scopes=ssd_300_vgg/block4_box,ssd_300_vgg/block7_box,ssd_300_vgg/block8_box,ssd_300_vgg/block9_box,ssd_300_vgg/block10_box,ssd_300_vgg/block11_box \
+    --dataset_name=kitti \
     --dataset_split_name=train \
     --model_name=ssd_300_vgg \
-    --checkpoint_path=${CHECKPOINT_PATH} \
     --save_summaries_secs=60 \
     --save_interval_secs=60 \
-    --weight_decay=0.00001 \
+    --weight_decay=0.0005 \
     --optimizer=rmsprop \
-    --learning_rate=0.0001 \
-    --batch_size=2
+    --learning_rate=0.000001 \
+    --batch_size=32
 
+    --checkpoint_path=${CHECKPOINT_PATH} \
+    --checkpoint_exclude_scopes=ssd_300_vgg/block4_box,ssd_300_vgg/block7_box,ssd_300_vgg/block8_box,ssd_300_vgg/block9_box,ssd_300_vgg/block10_box,ssd_300_vgg/block11_box \
 
 # =========================================================================== #
 # Inception v3
