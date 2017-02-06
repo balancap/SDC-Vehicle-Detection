@@ -4,12 +4,12 @@
 rm events* graph* model* checkpoint
 mv events* graph* model* checkpoint ./log
 
-DATASET_DIR=/media/paul/DataExt4/KITTI/rawdata/training
+DATASET_DIR=/media/paul/DataExt4/KITTI/rawdata/testing
 OUTPUT_DIR=/media/paul/DataExt4/KITTI/dataset
 python tf_convert_data.py \
     --dataset_name=kitti \
     --dataset_dir=${DATASET_DIR} \
-    --output_name=kitti_train \
+    --output_name=kitti_test \
     --output_dir=${OUTPUT_DIR}
 
 CAFFE_MODEL=/media/paul/DataExt4/PascalVOC/training/ckpts/SSD_300x300_ft/ssd_300_vgg.caffemodel

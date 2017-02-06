@@ -33,6 +33,7 @@ from collections import namedtuple
 
 import numpy as np
 import tensorflow as tf
+from tensorflow.python.ops import array_ops
 
 from nets import custom_layers
 from nets import ssd_common
@@ -140,6 +141,13 @@ class SSDNet(object):
         return ssd_arg_scope_caffe(caffe_scope)
 
     # ======================================================================= #
+    def update_feature_shapes(self, predictions):
+        """Update feature shapes from predictions collection (Tensor or Numpy
+        array).
+        """
+        shapes = ssd_feat_shapes_from_net(predictions, self.params.feat_shapes)
+        self.params = self.params._replace(feat_shapes=shapes)
+
     def anchors(self, img_shape, dtype=np.float32):
         """Compute the default anchor boxes, given an image shape.
         """
@@ -214,7 +222,8 @@ def ssd_size_bounds_to_values(size_bounds,
 
 
 def ssd_feat_shapes_from_net(predictions, default_shapes=None):
-    """Try to obtain the feature shapes from the prediction layers.
+    """Try to obtain the feature shapes from the prediction layers. The latter
+    can be either a Tensor or Numpy ndarray.
 
     Return:
       list of feature shapes. Default values if predictions shape not fully
@@ -222,7 +231,13 @@ def ssd_feat_shapes_from_net(predictions, default_shapes=None):
     """
     feat_shapes = []
     for l in predictions:
-        shape = l.get_shape().as_list()[1:4]
+        # Get the shape, from either a np array or a tensor.
+        if isinstance(l, np.ndarray):
+            shape = l.shape
+        else:
+            shape = l.get_shape().as_list()
+        shape = shape[1:4]
+        # Problem: undetermined shape...
         if None in shape:
             return default_shapes
         else:
@@ -308,6 +323,23 @@ def ssd_anchors_all_layers(img_shape,
 # =========================================================================== #
 # Functional definition of VGG-based SSD 300.
 # =========================================================================== #
+def tensor_shape(x, rank=3):
+    """Returns the dimensions of a tensor.
+    Args:
+      image: A N-D Tensor of shape.
+    Returns:
+      A list of dimensions. Dimensions that are statically known are python
+        integers,otherwise they are integer scalar tensors.
+    """
+    if x.get_shape().is_fully_defined():
+        return x.get_shape().as_list()
+    else:
+        static_shape = x.get_shape().with_rank(rank).as_list()
+        dynamic_shape = array_ops.unstack(array_ops.shape(x), rank)
+        return [s if s is not None else d
+                for s, d in zip(static_shape, dynamic_shape)]
+
+
 def ssd_multibox_layer(inputs,
                        num_classes,
                        sizes,
@@ -325,15 +357,13 @@ def ssd_multibox_layer(inputs,
     # Location.
     num_loc_pred = num_anchors * 4
     loc_pred = slim.conv2d(net, num_loc_pred, [3, 3], scope='conv_loc')
-    loc_pred = tf.reshape(loc_pred, tf.concat(0, [loc_pred.get_shape()[:-1],
-                                                  [num_anchors],
-                                                  [4]]))
+    loc_pred = tf.reshape(loc_pred,
+                          tensor_shape(loc_pred, 4)[:-1]+[num_anchors, 4])
     # Class prediction.
     num_cls_pred = num_anchors * num_classes
     cls_pred = slim.conv2d(net, num_cls_pred, [3, 3], scope='conv_cls')
-    cls_pred = tf.reshape(cls_pred, tf.concat(0, [cls_pred.get_shape()[:-1],
-                                                  [num_anchors],
-                                                  [num_classes]]))
+    cls_pred = tf.reshape(cls_pred,
+                          tensor_shape(cls_pred, 4)[:-1]+[num_anchors, num_classes])
     return cls_pred, loc_pred
 
 
@@ -490,13 +520,6 @@ def ssd_losses(logits, localisations,
       glocalisations: (list of) groundtruth localisations Tensors;
       gscores: (list of) groundtruth score Tensors;
     """
-    # Some debugging...
-    # for i in range(len(gclasses)):
-    #     print(localisations[i].get_shape())
-    #     print(logits[i].get_shape())
-    #     print(gclasses[i].get_shape())
-    #     print(glocalisations[i].get_shape())
-    #     print()
     with tf.name_scope(scope):
         l_cross = []
         l_loc = []
@@ -505,14 +528,23 @@ def ssd_losses(logits, localisations,
                 # Determine weights Tensor.
                 pmask = tf.cast(gclasses[i] > 0, logits[i].dtype)
                 n_positives = tf.reduce_sum(pmask)
-                n_entries = np.prod(gclasses[i].get_shape().as_list())
-                # r_positive = n_positives / n_entries
+
                 # Select some random negative entries.
-                r_negative = negative_ratio * n_positives / (n_entries - n_positives)
-                nmask = tf.random_uniform(gclasses[i].get_shape(),
-                                          dtype=logits[i].dtype)
-                nmask = nmask * (1. - pmask)
-                nmask = tf.cast(nmask > 1. - r_negative, logits[i].dtype)
+                # n_entries = np.prod(gclasses[i].get_shape().as_list())
+                # r_positive = n_positives / n_entries
+                # r_negative = negative_ratio * n_positives / (n_entries - n_positives)
+
+                # Negative mask.
+                predictions = slim.softmax(logits[i])
+                nvalues = (1. - pmask) * predictions[:, :, :, :, 0]
+                nvalues_flat = tf.reshape(nvalues, [-1])
+                min_neg_entries = tf.minimum(tf.size(nvalues_flat) // 8,
+                                             tf.shape(nvalues)[0] * 4)
+                n_neg = np.maximum(tf.cast(negative_ratio * n_positives, tf.int32),
+                                   min_neg_entries)
+                val, idxes = tf.nn.top_k(-nvalues_flat, k=n_neg)
+                minval = val[-1]
+                nmask = tf.cast(-nvalues > minval, logits[i].dtype)
 
                 # Add cross-entropy loss.
                 with tf.name_scope('cross_entropy'):
