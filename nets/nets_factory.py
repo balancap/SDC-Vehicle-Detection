@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-"""Contains a factory for building various models."""
-
+"""Contains a factory for building various models.
+"""
 
 import functools
 import tensorflow as tf
@@ -53,11 +53,11 @@ networks_obj = {'ssd_300_vgg': ssd_vgg_300.SSDNet,
                 }
 
 
-def get_network(name, params=None):
+def get_network(name):
     """Get a network object from a name.
     """
-    params = networks_obj[name].default_params if params is None else params
-    return networks_obj[name](params)
+    # params = networks_obj[name].default_params if params is None else params
+    return networks_obj[name]
 
 
 def get_network_fn(name, num_classes, is_training=False, **kwargs):

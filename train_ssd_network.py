@@ -345,8 +345,7 @@ def _reshape_list(l, shape=None):
 def main(_):
     if not FLAGS.dataset_dir:
         raise ValueError('You must supply the dataset directory with --dataset_dir')
-    print(FLAGS.__class__)
-    # d = dict(FLAGS)
+    print('Training FLAGS:')
     pprint(FLAGS.__flags)
 
     tf.logging.set_verbosity(tf.logging.DEBUG)
@@ -368,9 +367,12 @@ def main(_):
             FLAGS.dataset_name, FLAGS.dataset_split_name, FLAGS.dataset_dir)
 
         # Get the SSD network and its anchors.
-        ssd_net = nets_factory.get_network(FLAGS.model_name)
+        ssd_class = nets_factory.get_network(FLAGS.model_name)
+        ssd_params = ssd_class.default_params._replace(num_classes=FLAGS.num_classes)
+        ssd_net = ssd_class(ssd_params)
         ssd_shape = ssd_net.params.img_shape
         ssd_anchors = ssd_net.anchors(ssd_shape)
+        pprint(dict(ssd_params._asdict()))
 
         # Select the preprocessing function.
         preprocessing_name = FLAGS.preprocessing_name or FLAGS.model_name

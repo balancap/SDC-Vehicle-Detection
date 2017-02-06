@@ -4,12 +4,12 @@
 rm events* graph* model* checkpoint
 mv events* graph* model* checkpoint ./log
 
-DATASET_DIR=/media/paul/DataExt4/KITTI/rawdata/testing
+DATASET_DIR=/media/paul/DataExt4/KITTI/rawdata/training
 OUTPUT_DIR=/media/paul/DataExt4/KITTI/dataset
 python tf_convert_data.py \
     --dataset_name=kitti \
     --dataset_dir=${DATASET_DIR} \
-    --output_name=kitti_test \
+    --output_name=kitti_train \
     --output_dir=${OUTPUT_DIR}
 
 CAFFE_MODEL=/media/paul/DataExt4/PascalVOC/training/ckpts/SSD_300x300_ft/ssd_300_vgg.caffemodel
@@ -22,7 +22,7 @@ python caffe_to_tensorflow.py \
 # VGG-based SSD network
 # =========================================================================== #
 DATASET_DIR=/media/paul/DataExt4/KITTI/dataset
-TRAIN_DIR=./logs/ssd_300_kitti
+TRAIN_DIR=./logs/ssd_300_kitti_5
 CHECKPOINT_PATH=/media/paul/DataExt4/PascalVOC/training/ckpts/SSD_300x300_ft/ssd_300_vgg.ckpt
 CHECKPOINT_PATH=./checkpoints/ssd_300_vgg.ckpt
 python train_ssd_network.py \
