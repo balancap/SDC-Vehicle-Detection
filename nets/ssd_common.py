@@ -24,7 +24,9 @@ import tensorflow as tf
 def tf_ssd_bboxes_encode_layer(labels,
                                bboxes,
                                anchors_layer,
-                               matching_threshold=0.5,
+                               num_classes,
+                               no_annotation_label,
+                               ignore_threshold=0.5,
                                prior_scaling=[0.1, 0.1, 0.2, 0.2],
                                dtype=tf.float32):
     """Encode groundtruth labels and bounding boxes using SSD anchors from
@@ -59,7 +61,7 @@ def tf_ssd_bboxes_encode_layer(labels,
     feat_xmax = tf.ones(shape, dtype=dtype)
 
     def jaccard_with_anchors(bbox):
-        """Compute jaccard score a box and the anchors.
+        """Compute jaccard score between a box and the anchors.
         """
         int_ymin = tf.maximum(ymin, bbox[0])
         int_xmin = tf.maximum(xmin, bbox[1])
@@ -73,6 +75,19 @@ def tf_ssd_bboxes_encode_layer(labels,
             + (bbox[2] - bbox[0]) * (bbox[3] - bbox[1])
         jaccard = tf.div(inter_vol, union_vol)
         return jaccard
+
+    def intersection_with_anchors(bbox):
+        """Compute intersection between score a box and the anchors.
+        """
+        int_ymin = tf.maximum(ymin, bbox[0])
+        int_xmin = tf.maximum(xmin, bbox[1])
+        int_ymax = tf.minimum(ymax, bbox[2])
+        int_xmax = tf.minimum(xmax, bbox[3])
+        h = tf.maximum(int_ymax - int_ymin, 0.)
+        w = tf.maximum(int_xmax - int_xmin, 0.)
+        inter_vol = h * w
+        scores = tf.div(inter_vol, vol_anchors)
+        return scores
 
     def condition(i, feat_labels, feat_scores,
                   feat_ymin, feat_xmin, feat_ymax, feat_xmax):
@@ -91,20 +106,30 @@ def tf_ssd_bboxes_encode_layer(labels,
         # Jaccard score.
         label = labels[i]
         bbox = bboxes[i]
-        scores = jaccard_with_anchors(bbox)
-        # 'Boolean' mask.
-        mask = tf.logical_and(tf.greater(scores, matching_threshold),
-                              tf.greater(scores, feat_scores))
+        jaccard = jaccard_with_anchors(bbox)
+        # Mask: check threshold + scores + no annotations + num_classes.
+        mask = tf.greater(jaccard, feat_scores)
+        # mask = tf.logical_and(mask, tf.greater(jaccard, matching_threshold))
+        mask = tf.logical_and(mask, feat_scores > -0.5)
+        mask = tf.logical_and(mask, label < num_classes)
         imask = tf.cast(mask, tf.int64)
         fmask = tf.cast(mask, dtype)
         # Update values using mask.
         feat_labels = imask * label + (1 - imask) * feat_labels
-        feat_scores = tf.select(mask, scores, feat_scores)
+        feat_scores = tf.select(mask, jaccard, feat_scores)
 
         feat_ymin = fmask * bbox[0] + (1 - fmask) * feat_ymin
         feat_xmin = fmask * bbox[1] + (1 - fmask) * feat_xmin
         feat_ymax = fmask * bbox[2] + (1 - fmask) * feat_ymax
         feat_xmax = fmask * bbox[3] + (1 - fmask) * feat_xmax
+
+        # Check no annotation label: ignore these anchors...
+        interscts = intersection_with_anchors(bbox)
+        mask = tf.logical_and(interscts > ignore_threshold,
+                              label == no_annotation_label)
+        # Replace scores by -1.
+        feat_scores = tf.select(mask, -tf.cast(mask, dtype), feat_scores)
+
         return [i+1, feat_labels, feat_scores,
                 feat_ymin, feat_xmin, feat_ymax, feat_xmax]
     # Main loop definition.
@@ -133,7 +158,9 @@ def tf_ssd_bboxes_encode_layer(labels,
 def tf_ssd_bboxes_encode(labels,
                          bboxes,
                          anchors,
-                         matching_threshold=0.5,
+                         num_classes,
+                         no_annotation_label,
+                         ignore_threshold=0.5,
                          prior_scaling=[0.1, 0.1, 0.2, 0.2],
                          dtype=tf.float32,
                          scope='ssd_bboxes_encode'):
@@ -159,7 +186,9 @@ def tf_ssd_bboxes_encode(labels,
             with tf.name_scope('bboxes_encode_block_%i' % i):
                 t_labels, t_loc, t_scores = \
                     tf_ssd_bboxes_encode_layer(labels, bboxes, anchors_layer,
-                                               matching_threshold, prior_scaling, dtype)
+                                               num_classes, no_annotation_label,
+                                               ignore_threshold,
+                                               prior_scaling, dtype)
                 target_labels.append(t_labels)
                 target_localizations.append(t_loc)
                 target_scores.append(t_scores)

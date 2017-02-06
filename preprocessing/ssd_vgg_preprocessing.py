@@ -35,6 +35,10 @@ _R_MEAN = 123.
 _G_MEAN = 117.
 _B_MEAN = 104.
 
+# Some training pre-processing parameters.
+BBOX_CROP_OVERLAP = 0.3       # Minimum overlap to keep a bbox after cropping.
+CROP_RATIO_RANGE = (0.8, 1.2)
+
 
 def tf_image_whitened(image, means=[_R_MEAN, _G_MEAN, _B_MEAN]):
     """Subtracts the given means from each image channel.
@@ -216,9 +220,8 @@ def distorted_bounding_box_crop(image,
 
         # Update bounding boxes: resize and filter out.
         bboxes = ssd_common.tf_bboxes_resize(distort_bbox, bboxes)
-        labels, bboxes = ssd_common.tf_bboxes_filter(labels,
-                                                     bboxes,
-                                                     [0., 0., 0., 0.])
+        labels, bboxes = ssd_common.tf_bboxes_filter_overlap(labels, bboxes,
+                                                             BBOX_CROP_OVERLAP)
         return cropped_image, labels, bboxes, distort_bbox
 
 
@@ -250,18 +253,16 @@ def preprocess_for_train(image, labels, bboxes, out_shape,
             image = tf.image.convert_image_dtype(image, dtype=tf.float32)
         tf_summary_image(image, bboxes, 'image_with_bboxes')
 
-        # Remove DontCare labels.
-        out_label = 9
-        labels, bboxes = ssd_common.tf_bboxes_filter_labels(out_label,
-                                                            labels,
-                                                            bboxes)
+        # # Remove DontCare labels.
+        # labels, bboxes = ssd_common.tf_bboxes_filter_labels(out_label,
+        #                                                     labels,
+        #                                                     bboxes)
 
         # Distort image and bounding boxes.
-        aspect_ratio_range = (0.8, 1.2)
         dst_image = image
         dst_image, labels, bboxes, distort_bbox = \
             distorted_bounding_box_crop(image, labels, bboxes,
-                                        aspect_ratio_range=aspect_ratio_range)
+                                        aspect_ratio_range=CROP_RATIO_RANGE)
         # Resize image to output size.
         dst_image = tf_image.resize_image(dst_image, out_shape,
                                           method=tf.image.ResizeMethod.BILINEAR,
@@ -272,10 +273,10 @@ def preprocess_for_train(image, labels, bboxes, out_shape,
         dst_image, bboxes = tf_image.random_flip_left_right(dst_image, bboxes)
 
         # Randomly distort the colors. There are 4 ways to do it.
-        # dst_image = apply_with_random_selector(
-        #         dst_image,
-        #         lambda x, ordering: distort_color(x, ordering, fast_mode),
-        #         num_cases=4)
+        dst_image = apply_with_random_selector(
+                dst_image,
+                lambda x, ordering: distort_color(x, ordering, fast_mode),
+                num_cases=4)
         tf_summary_image(dst_image, bboxes, 'image_color_distorted')
 
         # Rescale to VGG input scale.
