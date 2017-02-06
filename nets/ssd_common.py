@@ -291,8 +291,9 @@ def tf_bboxes_resize(bbox_ref, bboxes,
         return bboxes
 
 
-def tf_bboxes_filter(labels, bboxes, margins=[0., 0., 0., 0.],
-                     scope='bboxes_filter'):
+def tf_bboxes_filter_center(labels, bboxes,
+                            margins=[0., 0., 0., 0.],
+                            scope=None):
     """Filter out bounding boxes whose center are not in
     the rectangle [0, 0, 1, 1] + margins. The margin Tensor
     can be used to enforce or loosen this condition.
@@ -300,7 +301,7 @@ def tf_bboxes_filter(labels, bboxes, margins=[0., 0., 0., 0.],
     Return:
       labels, bboxes: Filtered elements.
     """
-    with tf.name_scope(scope):
+    with tf.name_scope(scope, 'bboxes_filter', [labels, bboxes]):
         cy = (bboxes[:, 0] + bboxes[:, 2]) / 2.
         cx = (bboxes[:, 1] + bboxes[:, 3]) / 2.
         mask = tf.greater(cy, margins[0])
@@ -313,18 +314,38 @@ def tf_bboxes_filter(labels, bboxes, margins=[0., 0., 0., 0.],
         return labels, bboxes
 
 
-def tf_bboxes_filter_labels(out_label, labels, bboxes,
-                            scope='bboxes_filter_labels'):
-    """Filter out a label from a collection. Typically used to get
-    of DontCare elements.
+def tf_bboxes_filter_overlap(labels, bboxes,
+                             threshold=0.5,
+                             scope=None):
+    """Filter out bounding boxes based on overlap with reference
+    box [0, 0, 1, 1].
 
     Return:
       labels, bboxes: Filtered elements.
     """
-    with tf.name_scope(scope):
-        mask = tf.not_equal(labels, out_label)
-        tf.log
+    with tf.name_scope(scope, 'bboxes_filter', [labels, bboxes]):
+        scores = tf_bboxes_intersection(tf.constant([0, 0, 1, 1], bboxes.dtype),
+                                        bboxes)
         # Boolean masking...
+        mask = scores > threshold
+        labels = tf.boolean_mask(labels, mask)
+        bboxes = tf.boolean_mask(bboxes, mask)
+        return labels, bboxes
+
+
+def tf_bboxes_filter_labels(labels, bboxes,
+                            out_labels=[], num_classes=np.inf,
+                            scope=None):
+    """Filter out labels from a collection. Typically used to get
+    of DontCare elements. Also remove elements based on the number of classes.
+
+    Return:
+      labels, bboxes: Filtered elements.
+    """
+    with tf.name_scope(scope, 'bboxes_filter_labels', [labels, bboxes]):
+        mask = tf.greater_equal(labels, num_classes)
+        for l in labels:
+            mask = tf.logical_and(mask, tf.not_equal(labels, l))
         labels = tf.boolean_mask(labels, mask)
         bboxes = tf.boolean_mask(bboxes, mask)
         return labels, bboxes
