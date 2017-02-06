@@ -28,5 +28,5 @@ KITTI_LABELS = {
     'DontCare': (9, 'DontCare'),
 }
 KITTI_DONTCARE = 9
-NUM_CLASSES = 9
+NUM_CLASSES = 8
 
