@@ -190,7 +190,10 @@ class SSDNet(object):
         """
         ssd_losses(logits, localisations,
                    gclasses, glocalisations, gscores,
-                   label_smoothing,
+                   match_threshold=0.5,
+                   negative_ratio=3.,
+                   alpha=1.,
+                   label_smoothing=label_smoothing,
                    scope=scope)
 
 
@@ -543,7 +546,8 @@ def ssd_losses(logits, localisations,
 
                 # Negative mask.
                 predictions = slim.softmax(logits[i])
-                nmask = tf.logical_and(~pmask, gscores[i] > -0.5)
+                nmask = tf.logical_and(tf.logical_not(pmask),
+                                       gscores[i] > -0.5)
                 fnmask = tf.cast(nmask, dtype)
                 nvalues = tf.select(nmask,
                                     predictions[:, :, :, :, 0],
@@ -553,7 +557,7 @@ def ssd_losses(logits, localisations,
                 n_neg = tf.cast(negative_ratio * n_positives, tf.int32)
                 n_neg = tf.maximum(n_neg, tf.size(nvalues_flat) // 8)
                 n_neg = tf.maximum(n_neg, tf.shape(nvalues)[0] * 4)
-                max_neg_entries = tf.cast(tf.reduce_sum(fnmask), tf.int32)
+                max_neg_entries = 1 + tf.cast(tf.reduce_sum(fnmask), tf.int32)
                 n_neg = tf.minimum(n_neg, max_neg_entries)
 
                 val, idxes = tf.nn.top_k(-nvalues_flat, k=n_neg)
