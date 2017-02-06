@@ -521,7 +521,8 @@ def ssd_losses(logits, localisations,
       gscores: (list of) groundtruth score Tensors;
     """
     with tf.name_scope(scope):
-        l_cross = []
+        l_cross_pos = []
+        l_cross_neg = []
         l_loc = []
         for i in range(len(logits)):
             with tf.name_scope('block_%i' % i):
@@ -540,20 +541,24 @@ def ssd_losses(logits, localisations,
                 nvalues_flat = tf.reshape(nvalues, [-1])
                 min_neg_entries = tf.minimum(tf.size(nvalues_flat) // 8,
                                              tf.shape(nvalues)[0] * 4)
-                n_neg = np.maximum(tf.cast(negative_ratio * n_positives, tf.int32),
+                n_neg = tf.maximum(tf.cast(negative_ratio * n_positives, tf.int32),
                                    min_neg_entries)
                 val, idxes = tf.nn.top_k(-nvalues_flat, k=n_neg)
                 minval = val[-1]
                 nmask = tf.cast(-nvalues > minval, logits[i].dtype)
 
                 # Add cross-entropy loss.
-                with tf.name_scope('cross_entropy'):
-                    # Weights Tensor: positive mask + random negative.
-                    weights = pmask + nmask
+                with tf.name_scope('cross_entropy_pos'):
                     loss = tf.nn.sparse_softmax_cross_entropy_with_logits(logits[i],
                                                                           gclasses[i])
-                    loss = tf.contrib.losses.compute_weighted_loss(loss, weights)
-                    l_cross.append(loss)
+                    loss = tf.contrib.losses.compute_weighted_loss(loss, pmask)
+                    l_cross_pos.append(loss)
+
+                with tf.name_scope('cross_entropy_neg'):
+                    loss = tf.nn.sparse_softmax_cross_entropy_with_logits(logits[i],
+                                                                          gclasses[i])
+                    loss = tf.contrib.losses.compute_weighted_loss(loss, nmask)
+                    l_cross_neg.append(loss)
 
                 # Add localization loss: smooth L1, L2, ...
                 with tf.name_scope('localization'):
@@ -565,5 +570,7 @@ def ssd_losses(logits, localisations,
 
         # Total losses in summaries...
         with tf.name_scope('total'):
-            tf.summary.scalar('cross_entropy', tf.add_n(l_cross))
+            tf.summary.scalar('cross_entropy_pos', tf.add_n(l_cross_pos))
+            tf.summary.scalar('cross_entropy_neg', tf.add_n(l_cross_neg))
+            tf.summary.scalar('cross_entropy', tf.add_n(l_cross_pos + l_cross_neg))
             tf.summary.scalar('localization', tf.add_n(l_loc))

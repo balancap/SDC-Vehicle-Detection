@@ -13,6 +13,8 @@
 # limitations under the License.
 # ==============================================================================
 """Generic training script that trains a SSD model using a given dataset."""
+from pprint import pprint
+
 import tensorflow as tf
 from tensorflow.python.ops import control_flow_ops
 
@@ -115,6 +117,8 @@ tf.app.flags.DEFINE_float(
 # =========================================================================== #
 tf.app.flags.DEFINE_string(
     'dataset_name', 'imagenet', 'The name of the dataset to load.')
+tf.app.flags.DEFINE_integer(
+    'num_classes', 8, 'Number of classes to use in the dataset.')
 tf.app.flags.DEFINE_string(
     'dataset_split_name', 'train', 'The name of the train/test split.')
 tf.app.flags.DEFINE_string(
@@ -341,6 +345,9 @@ def _reshape_list(l, shape=None):
 def main(_):
     if not FLAGS.dataset_dir:
         raise ValueError('You must supply the dataset directory with --dataset_dir')
+    print(FLAGS.__class__)
+    # d = dict(FLAGS)
+    pprint(FLAGS.__flags)
 
     tf.logging.set_verbosity(tf.logging.DEBUG)
     with tf.Graph().as_default():
