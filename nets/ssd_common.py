@@ -553,6 +553,27 @@ def bboxes_jaccard(bboxes1, bboxes2):
     return jaccard
 
 
+def bboxes_intersection(bbox, bboxes):
+    """Computing jaccard index between bboxes1 and bboxes2.
+    Note: bboxes1 can be multi-dimensional.
+    """
+    if bboxes.ndim == 1:
+        bboxes = np.expand_dims(bboxes, 0)
+    # Intersection bbox and volume.
+    int_ymin = np.maximum(bboxes[:, 0], bbox[0])
+    int_xmin = np.maximum(bboxes[:, 1], bbox[1])
+    int_ymax = np.minimum(bboxes[:, 2], bbox[2])
+    int_xmax = np.minimum(bboxes[:, 3], bbox[3])
+
+    int_h = np.maximum(int_ymax - int_ymin, 0.)
+    int_w = np.maximum(int_xmax - int_xmin, 0.)
+    int_vol = int_h * int_w
+    # Union volume.
+    vol = (bboxes[:, 2] - bboxes[:, 0]) * (bboxes[:, 3] - bboxes[:, 1])
+    score = int_vol / vol
+    return score
+
+
 def bboxes_nms(classes, scores, bboxes, threshold=0.45):
     """Apply non-maximum selection to bounding boxes.
     """
