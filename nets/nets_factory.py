@@ -18,7 +18,7 @@
 import functools
 import tensorflow as tf
 
-from nets import inception
+# from nets import inception
 # from nets import overfeat
 # from nets import resnet_v1
 # from nets import resnet_v2
@@ -32,9 +32,6 @@ slim = tf.contrib.slim
 networks_map = {'vgg_a': vgg.vgg_a,
                 'vgg_16': vgg.vgg_16,
                 'vgg_19': vgg.vgg_19,
-                'inception_v3': inception.inception_v3,
-                'inception_resnet_v2': inception.inception_resnet_v2,
-                'xception': xception.xception,
                 'ssd_300_vgg': ssd_vgg_300.ssd_net,
                 'ssd_300_vgg_caffe': ssd_vgg_300.ssd_net,
                 }
@@ -42,9 +39,6 @@ networks_map = {'vgg_a': vgg.vgg_a,
 arg_scopes_map = {'vgg_a': vgg.vgg_arg_scope,
                   'vgg_16': vgg.vgg_arg_scope,
                   'vgg_19': vgg.vgg_arg_scope,
-                  'inception_v3': inception.inception_v3_arg_scope,
-                  'inception_resnet_v2': inception.inception_resnet_v2_arg_scope,
-                  'xception': xception.xception_arg_scope,
                   'ssd_300_vgg': ssd_vgg_300.ssd_arg_scope,
                   'ssd_300_vgg_caffe': ssd_vgg_300.ssd_arg_scope_caffe,
                   }
