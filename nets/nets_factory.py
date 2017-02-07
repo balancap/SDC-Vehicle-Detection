@@ -23,7 +23,7 @@ import tensorflow as tf
 # from nets import resnet_v1
 # from nets import resnet_v2
 from nets import vgg
-from nets import xception
+# from nets import xception
 
 from nets import ssd_vgg_300
 
