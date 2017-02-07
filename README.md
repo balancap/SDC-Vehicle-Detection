@@ -210,4 +210,35 @@ A key aspect of the training was to keep track of the different losses: classifi
 
 ![](pictures/ssd_tensorboard.png "SSD TensorBoard")
 
+## SSD post-processing
 
+The SSD network requires a little bit of post-processing. Indeed, similarly to a classic HOG + SVM approach, an object can be detected multiple times, by several close anchors. In order to get rid of these multiple detections, we use *Non-Maximum Suppression* algorithm to obtain a unique detection box for each object. More specifically, the former algorithm sort the detection boxes by prediction scores, and for every one of it, remove the boxes with too much overlap and lower score. Namely:
+```python
+def bboxes_nms(classes, scores, bboxes, threshold=0.45):
+    """Apply non-maximum selection to bounding boxes.
+    """
+    keep_bboxes = np.ones(scores.shape, dtype=np.bool)
+    for i in range(scores.size-1):
+        if keep_bboxes[i]:
+            # Computer overlap with bboxes which are following.
+            overlap = bboxes_jaccard(bboxes[i], bboxes[(i+1):])
+            # Overlap threshold for keeping + checking part of the same class
+            keep_overlap = np.logical_or(overlap < threshold, classes[(i+1):] != classes[i])
+            keep_bboxes[(i+1):] = np.logical_and(keep_bboxes[(i+1):], keep_overlap)
+    idxes = np.where(keep_bboxes)
+    return classes[idxes], scores[idxes], bboxes[idxes]
+```
+
+# Vehicle Detection pipeline
+
+Let us finally describe briefly the vehicle detection pipeline based on the SSD network. The former is constituted of following steps:
+* resize every frame to obtain a height of 300 pixels, corresponding to the image size used for training the SSD network;
+* run the SSD network on the resized frame;
+* apply the Non-Maximum Suppression algorithm to get rid of multiple detections of a single vehicle;
+
+In the case of a video, we also applied some filtering and forgetting algorithms. Namely:
+* for every frame, we first try to fit vehicles previously detected, by order of size. For that purpose, we used the previous estimate of size and speed, and match with a vehicle detected if the relative difference between the forecast position and the detected one is less than 20%;
+* for remaining matches, we then consider them as new vehicles which just appeared;
+* vehicles which have not been detected after 10 frames are removed (with the exception of vehicles which are estimated as being hidden behind another one).
+
+The computation of these pipeline steps are presented in the Jupyter Notebook ```vehicle-detection.ipynb```
