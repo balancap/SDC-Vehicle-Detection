@@ -38,7 +38,7 @@ As a result, the global SSD network will provide a classification score and an o
 Porting the SSD network to TensorFlow has been a worthy but ambitious project on its own! Designing a robust pipeline in TensorFlow requires quite a bit of engineering, and debugging, especially in the case of object detection networks.
 For this SSD pipeline, I took inspiration from the implementation of common deep CNNs in TF-Slim (https://github.com/tensorflow/models/tree/master/slim). Basically, the pipeline is divided into three main components (and directories):
 * ```datasets```: the Python source files implement the interface for different dataset, and describe how to convert the original raw data into *TFRecords* files. In our case, as we use the KITTI dataset, the file ```kitti_to_tfrecords.py``` performs this convertion, and the files ```kitti.py``` and ```kitti_common.py``` implements the interface, in the form of TF-Slim dataset object. Note that we also left the source files describing the Pascal VOC dataset, in case we would like to combine the latter with the KITTI dataset.
-* ```preprocessing```: this directory contains the implementation of the pre-processing before training (or evaluation). More specifically, we described our pipeline in the file ```ssd_vgg_preprocessing.py```. During training, our pre-processing pipeline performs three different important random transformations: 
+* ```preprocessing```: this directory contains the implementation of the pre-processing before training (or evaluation). More specifically, we described our pipeline in the file ```ssd_vgg_preprocessing.py```. During training, our pre-processing pipeline performs three different important random transformations:
     * random cropping: a zone containing objects is randomly generated and used for cropping the input image;
     * random flipping: the image is randomly left-right flipped;
     * random color distortions: we randomly distort the saturation, hue, contrast and brightness of the images.
@@ -170,7 +170,7 @@ def ssd_net(inputs, num_classes,
 
         return predictions, localisations, logits, end_points
 ```
-The ```nets``` directory contains a few more important methods necessary to the SSD network. The complex loss function, combining classification and localization losses is implemented in the file ```ssd_vgg_300.py``` as the method ```ssd_losses```. The source file ```ssd_common.py``` contains multiple functions related to bounding boxes computations (jaccard score, intersection, resizing, filtering, ...). More specific to the SSD network, it also contains the functions ``tf_ssd_bboxes_encode```` and ```tf_ssd_bboxes_decode``` responsible of encoding (and decoding) labels and bounding boxes into the output format of the SSD network, i.e. for each feature layer, two Tensors corresponding to classification and localisation. 
+The ```nets``` directory contains a few more important methods necessary to the SSD network. The complex loss function, combining classification and localization losses is implemented in the file ```ssd_vgg_300.py``` as the method ```ssd_losses```. The source file ```ssd_common.py``` contains multiple functions related to bounding boxes computations (jaccard score, intersection, resizing, filtering, ...). More specific to the SSD network, it also contains the functions ``tf_ssd_bboxes_encode```` and ```tf_ssd_bboxes_decode``` responsible of encoding (and decoding) labels and bounding boxes into the output format of the SSD network, i.e. for each feature layer, two Tensors corresponding to classification and localisation.
 
 The overall pipeline is represented in the graph below, with the following main steps:
 * KITTI data loading from TFRecords;
@@ -234,11 +234,20 @@ def bboxes_nms(classes, scores, bboxes, threshold=0.45):
 Let us finally describe briefly the vehicle detection pipeline based on the SSD network. The former is constituted of following steps:
 * resize every frame to obtain a height of 300 pixels, corresponding to the image size used for training the SSD network;
 * run the SSD network on the resized frame;
-* apply the Non-Maximum Suppression algorithm to get rid of multiple detections of a single vehicle;
+* apply the Non-Maximum Suppression algorithm to get rid of multiple detections of a single vehicle and average the detected boxes;
+In order to avoid false positive, we use a high threshold, 0.7, on the classification result coming from the SSD network. In practice, the latter is sufficiently reliable that even a threshold of 0.9 would be fine.
 
 In the case of a video, we also applied some filtering and forgetting algorithms. Namely:
-* for every frame, we first try to fit vehicles previously detected, by order of size. For that purpose, we used the previous estimate of size and speed, and match with a vehicle detected if the relative difference between the forecast position and the detected one is less than 20%;
+* for every frame, we first try to fit vehicles previously detected, by order of size. For that purpose, we used the previous estimate of size and speed, and match with a vehicle detected if the two overlap with more than 50%;
 * for remaining matches, we then consider them as new vehicles which just appeared;
-* vehicles which have not been detected after 10 frames are removed (with the exception of vehicles which are estimated as being hidden behind another one).
+* vehicles which have not been detected after 10 frames are removed;
+* vehicles have to be detected for at least 10 frames before being shown.
 
-The computation of these pipeline steps are presented in the Jupyter Notebook ```vehicle-detection.ipynb```
+The computation of these pipeline steps are presented in the Jupyter Notebook ```vehicle-detection.ipynb``` The algorithm is also presented in more details in the latter.
+
+## Further improvements
+
+The vehicle detection is clearly far from perfect as it is now! There are several parts of the pipeline which could be improved:
+* SSD network: the output of the network is not yet optimal, and could get better. For instance, by training on multiple resolutions, YOLO has been shown to obtain much better detection performance. Other architectures than VGG could also be investigated;
+* The NMS algorithm implemented is rather simple, and I think could be improve for selecting the best box from multiple detections;
+* Finally, the tracking is also rather simple and non-optimal, especially when vehicles cross each other trajectories. I think tracking additional features such as average color could help to improve tracking performance and avoid mixing up vehicles detected.
