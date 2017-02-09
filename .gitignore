@@ -4,7 +4,9 @@ deployment/__pycache__/
 nets/__pycache__/
 preprocessing/__pycache__/
 
+.ipynb_checkpoints/
 notebooks/.ipynb_checkpoints/
+
 *.sublime-workspace
 *.sublime-project
 
@@ -12,4 +14,4 @@ checkpoints/ssd_300_vgg.ckpt.data-00000-of-00001
 checkpoints/ssd_300_vgg.ckpt.index
 
 logs/
-.ipynb_checkpoints/
+*.log

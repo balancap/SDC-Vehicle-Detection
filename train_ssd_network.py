@@ -515,6 +515,11 @@ def main(_):
         # =================================================================== #
         # Kicks off the training.
         # =================================================================== #
+        config = tf.ConfigProto(log_device_placement=False)
+        saver = tf.train.Saver(max_to_keep=5,
+                               keep_checkpoint_every_n_hours=1.0,
+                               write_version=2,
+                               pad_step_number=False)
         slim.learning.train(
             train_tensor,
             logdir=FLAGS.train_dir,
@@ -525,8 +530,10 @@ def main(_):
             number_of_steps=FLAGS.max_number_of_steps,
             log_every_n_steps=FLAGS.log_every_n_steps,
             save_summaries_secs=FLAGS.save_summaries_secs,
+            saver=saver,
             save_interval_secs=FLAGS.save_interval_secs,
-            sync_optimizer=None)
+            sync_optimizer=None,
+            session_config=config)
 
 
 if __name__ == '__main__':
